@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import puppeteer from 'puppeteer';
 import axeCore from 'axe-core';
 import parseArgs from 'minimist';
