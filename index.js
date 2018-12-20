@@ -75,7 +75,7 @@ const getStories = async (browser, components) => {
 };
 
 (async () => {
-  const browser = await puppeteer.launch().catch((e) => unknownError(e));
+  const browser = await puppeteer.launch({args: ['--no-sandbox', '--disable-setuid-sandbox']}).catch((e) => unknownError(e));
   const components = await getStorybook(browser, localhost).catch((e) => unknownError(e));
   const stories = await getStories(browser, components);
   let errors = [];
