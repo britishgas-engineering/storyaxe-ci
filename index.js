@@ -12,8 +12,9 @@ if (args.input) {
   localhost = `file://${path.join(process.cwd(), localhost)}`;
 }
 
-const unknownError = () => {
+const unknownError = (e) => {
   console.error('Something went wrong, please make sure storybook is running or is pointed to the right location.'.red);
+  console.error(e);
   process.exit(1);
 }
 
@@ -75,7 +76,7 @@ const getStories = async (browser, components) => {
 
 (async () => {
   const browser = await puppeteer.launch().catch((e) => Error(`error: ${e}`));
-  const components = await getStorybook(browser, localhost).catch(() => unknownError());
+  const components = await getStorybook(browser, localhost).catch((e) => unknownError(e));
   const stories = await getStories(browser, components);
   let errors = [];
 
@@ -86,7 +87,7 @@ const getStories = async (browser, components) => {
   try {
     for (const storyObj of allStories) {
       console.log(`\n${storyObj.kind}: ${storyObj.name} \n`.cyan);
-      const bar = await runAxeOnPage(browser, storyObj.url).catch(() => unknownError());
+      const bar = await runAxeOnPage(browser, storyObj.url).catch((e) => unknownError(e));
 
       if (bar.violations.length < 1) {
         console.log('  All accessibility checks passed'.green);
