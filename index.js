@@ -24,6 +24,7 @@ const logger = (story, violation) => {
 
   if (violation) {
     const {description, helpUrl, nodes} = violation;
+
     console.error(
       `
       ${name}
@@ -102,7 +103,7 @@ const getStories = async (browser, components) => {
 
       const results = await handle.jsonValue();
 
-    	await handle.dispose();
+      await handle.dispose();
       await page.close();
 
       if (results.violations.length < 1) {
