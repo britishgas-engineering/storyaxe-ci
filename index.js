@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import puppeteer from 'puppeteer';
+import { Cluster } from 'puppeteer-cluster';
 import axeCore from 'axe-core';
 import parseArgs from 'minimist';
 import colors from 'colors';
@@ -18,32 +19,28 @@ const unknownError = (e) => {
   process.exit(1);
 }
 
-const runAxeOnPage = async (browser, url) => {
-  try {
-    const page = await browser.newPage();
+const logger = (story, violation) => {
+  const name = `${story.kind}: ${story.name}`;
 
-    await page.goto(url, {
-      waitUntil: 'networkidle2'
-    });
+  if (violation) {
+    const {description, helpUrl, nodes} = violation;
 
-    const handle = await page.evaluateHandle(`
-      const wrapper = document.getElementById('root');
-  		${axeCore.source}
-  		axe.run(wrapper)
-  	`);
-
-    const results = await handle.jsonValue();
-
-  	await handle.dispose();
-    await page.close();
-
-  	return results;
-  }  catch (err) {
-		if (browser) {
-			await browser.close();
-		}
-		throw err;
-	}
+    console.error(
+      `
+      ${name}
+      `.cyan,
+      `  ${violation.description}\n`.red,
+      `  Please check:`.red, `${violation.helpUrl}\n`.red,
+      `  ${violation.nodes[0].failureSummary}`.red
+    );
+  } else {
+    console.log(
+      `
+      ${name}
+      `.cyan,
+      '  All accessibility checks passed'.green
+    );
+  }
 };
 
 const getStorybook = async (browser, url) => {
@@ -80,33 +77,55 @@ const getStories = async (browser, components) => {
   const stories = await getStories(browser, components);
   let errors = [];
 
+  await browser.close();
+
+  const cluster = await Cluster.launch({
+    concurrency: Cluster.CONCURRENCY_CONTEXT,
+    maxConcurrency: 10,
+  });
+
   const allStories = stories.reduce((all, value) => {
     return all.concat(value);
   }, []);
 
-  try {
-    for (const storyObj of allStories) {
-      console.log(`\n${storyObj.kind}: ${storyObj.name} \n`.cyan);
-      const bar = await runAxeOnPage(browser, storyObj.url).catch((e) => unknownError(e));
+  await cluster.task(async ({ page, data }) => {
+    const {url} = data;
 
-      if (bar.violations.length < 1) {
-        console.log('  All accessibility checks passed'.green);
+    try {
+
+      await page.goto(url, {waitUntil:  'networkidle2'});
+
+      const handle = await page.evaluateHandle(`
+        const wrapper = document.getElementById('root');
+    		${axeCore.source}
+    		axe.run(wrapper)
+    	`);
+
+      const results = await handle.jsonValue();
+
+      await handle.dispose();
+      await page.close();
+
+      if (results.violations.length < 1) {
+        logger(data);
       }
-      bar.violations.forEach((violation) => {
-        errors.push(violation);
-        console.error(`  ${violation.description}`.red);
-        console.info(`  Please check:`.red, `${violation.helpUrl}`.red);
-        console.info(`  ${violation.nodes[0].failureSummary}`.red);
-      });
-    }
-  } catch (err) {
-		if (browser) {
-			await browser.close();
-		}
-		throw err;
-	}
 
-  await browser.close();
+      results.violations.forEach((violation) => {
+        errors.push(violation);
+        logger(data, violation);
+      });
+
+    } catch (err) {
+      throw err;
+    }
+  });
+
+  for (const storyObj of allStories) {
+    cluster.queue(storyObj);
+  }
+
+  await cluster.idle();
+  await cluster.close();
 
   if (errors.length > 0) {
     console.error(`\n${errors.length} accessibility tests failed`.underline.red);
