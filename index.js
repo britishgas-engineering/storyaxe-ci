@@ -6,6 +6,8 @@ import colors from 'colors';
 import path from 'path';
 
 const args = parseArgs(process.argv.slice(2));
+const opts = args.opts || ['--no-sandbox', '--disable-setuid-sandbox'];
+
 let localhost = args.input || args.localhost || 'http://localhost:9001/iframe.html';
 
 if (args.input) {
@@ -75,7 +77,7 @@ const getStories = async (browser, components) => {
 };
 
 (async () => {
-  const browser = await puppeteer.launch({args: ['--no-sandbox', '--disable-setuid-sandbox']}).catch((e) => unknownError(e));
+  const browser = await puppeteer.launch({args: opts}).catch((e) => unknownError(e));
   const components = await getStorybook(browser, localhost).catch((e) => unknownError(e));
   const stories = await getStories(browser, components);
   let errors = [];

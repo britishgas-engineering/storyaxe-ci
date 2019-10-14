@@ -53,6 +53,17 @@ If you are using the served version of Storybook use `localhost`:
 storyaxe --localhost http://localhost:8080/iframe.html
 ```
 
+
+#### Changing browser args
+
+You can pass a parameter of `opts` to change the browser arguments.
+
+These will default as `['--no-sandbox', '--disable-setuid-sandbox']`
+
+```
+storyaxe --opts ['--no-sandbox', '--disable-setuid-sandbox']
+```
+
 > It should always point to the `iframe.html`
 
 ## Contributions
