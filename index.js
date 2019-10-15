@@ -7,7 +7,7 @@ import colors from 'colors';
 import path from 'path';
 
 const args = parseArgs(process.argv.slice(2));
-const opts = args.opts || ['--no-sandbox', '--disable-setuid-sandbox'];
+const opts = args.opts && args.opts.replace('[', '').replace(']', '').split(',') || ['--no-sandbox', '--disable-setuid-sandbox'];
 
 let localhost = args.input || args.localhost || 'http://localhost:9001/iframe.html';
 
